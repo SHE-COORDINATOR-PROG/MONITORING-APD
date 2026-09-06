@@ -55,6 +55,9 @@ export default function FormTandaTerima() {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ id: number; tanggal_kadaluarsa: string } | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
+  export default function FormTandaTerima() {
+  const router = useRouter();
+  const [jenisList, setJenisList] = useState<JenisApd[]>([]);
 
   const {
     register,
