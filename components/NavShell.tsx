@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const NAV = [
   { href: "/dashboard", label: "Dashboard", desc: "Monitoring pemakaian" },
   { href: "/form", label: "Tanda Terima", desc: "Formulir serah APD" },
+  { href: "/riwayat", label: "Riwayat Penerima", desc: "Daftar & filter riwayat" },
 ];
 
 export default function NavShell({ children }: { children: React.ReactNode }) {

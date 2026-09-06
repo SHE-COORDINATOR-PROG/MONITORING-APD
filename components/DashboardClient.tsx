@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import KpiCard from "@/components/KpiCard";
 import { formatTanggalID } from "@/lib/types";
+import type { JenisApd } from "@/lib/types";
 
 type Stats = {
   ringkasan: {
@@ -38,20 +39,46 @@ type Stats = {
 };
 
 const CHART_TICK = { fill: "#8b98a3", fontSize: 12 };
+const selectClass =
+  "rounded-md border border-base-600 bg-base-800 px-3 py-2 text-sm text-base-100 focus:border-signal-amber focus:outline-none focus:ring-1 focus:ring-signal-amber";
 
 export default function DashboardClient() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [jenisList, setJenisList] = useState<JenisApd[]>([]);
+
+  const [dari, setDari] = useState("");
+  const [sampai, setSampai] = useState("");
+  const [jenisApdId, setJenisApdId] = useState("");
 
   useEffect(() => {
-    fetch("/api/stats")
+    fetch("/api/jenis-apd")
+      .then((r) => r.json())
+      .then((json) => setJenisList(json.data ?? []))
+      .catch(() => void 0);
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (dari) params.set("dari", dari);
+    if (sampai) params.set("sampai", sampai);
+    if (jenisApdId) params.set("jenis_apd_id", jenisApdId);
+
+    fetch(`/api/stats?${params.toString()}`, { cache: "no-store" })
       .then(async (res) => {
         const json = await res.json();
         if (!res.ok) throw new Error(json.error ?? "Gagal memuat data");
         setStats(json);
+        setError(null);
       })
       .catch((e) => setError(e.message));
-  }, []);
+  }, [dari, sampai, jenisApdId]);
+
+  const resetFilter = () => {
+    setDari("");
+    setSampai("");
+    setJenisApdId("");
+  };
 
   if (error) {
     return (
@@ -71,10 +98,11 @@ export default function DashboardClient() {
     delta === 0
       ? "Sama seperti bulan lalu"
       : `${delta > 0 ? "+" : ""}${delta} unit vs bulan lalu`;
+  const filterAktif = dari || sampai || jenisApdId;
 
   return (
     <div className="p-4 md:p-8">
-      <div className="mb-6 flex items-baseline justify-between">
+      <div className="mb-6 flex flex-wrap items-baseline justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-base-100">Monitoring Pemakaian APD</h1>
           <p className="mt-1 text-sm text-base-400">
@@ -83,9 +111,53 @@ export default function DashboardClient() {
         </div>
       </div>
 
+      <div className="mb-6 flex flex-wrap items-end gap-3 rounded-lg border border-base-700 bg-base-900 p-3">
+        <div>
+          <label className="mb-1 block text-xs text-base-400">Dari tanggal</label>
+          <input
+            type="date"
+            value={dari}
+            onChange={(e) => setDari(e.target.value)}
+            className={selectClass}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-base-400">Sampai tanggal</label>
+          <input
+            type="date"
+            value={sampai}
+            onChange={(e) => setSampai(e.target.value)}
+            className={selectClass}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-base-400">Jenis APD</label>
+          <select
+            value={jenisApdId}
+            onChange={(e) => setJenisApdId(e.target.value)}
+            className={selectClass}
+          >
+            <option value="">Semua jenis</option>
+            {jenisList.map((j) => (
+              <option key={j.id} value={j.id}>
+                {j.nama}
+              </option>
+            ))}
+          </select>
+        </div>
+        {filterAktif && (
+          <button
+            onClick={resetFilter}
+            className="rounded-md border border-base-600 px-3 py-2 text-sm text-base-300 hover:bg-base-800"
+          >
+            Reset filter
+          </button>
+        )}
+      </div>
+
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <KpiCard label="Didistribusikan bulan ini" value={ringkasan.bulan_ini} sub={deltaLabel} />
-        <KpiCard label="Total unit sepanjang waktu" value={ringkasan.total_sepanjang_waktu} />
+        <KpiCard label="Total unit (sesuai filter)" value={ringkasan.total_sepanjang_waktu} />
         <KpiCard label="Pekerja tercatat" value={ringkasan.total_pekerja_tercatat} />
         <KpiCard
           label="Akan kadaluarsa ≤ 30 hari"

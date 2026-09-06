@@ -28,7 +28,10 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const departemen = searchParams.get("departemen");
     const jenis = searchParams.get("jenis_apd_id");
-    const cari = searchParams.get("q");
+    const nama = searchParams.get("nama");
+    const nik = searchParams.get("nik");
+    const dari = searchParams.get("dari"); // YYYY-MM-DD
+    const sampai = searchParams.get("sampai"); // YYYY-MM-DD
     const limit = Math.min(Number(searchParams.get("limit") ?? 50), 200);
 
     const rows = await sql`
@@ -38,11 +41,10 @@ export async function GET(req: NextRequest) {
       WHERE
         (${departemen}::text IS NULL OR p.departemen = ${departemen})
         AND (${jenis}::int IS NULL OR p.jenis_apd_id = ${jenis}::int)
-        AND (
-          ${cari}::text IS NULL
-          OR p.nama_pekerja ILIKE '%' || ${cari} || '%'
-          OR p.nik ILIKE '%' || ${cari} || '%'
-        )
+        AND (${nama}::text IS NULL OR p.nama_pekerja ILIKE '%' || ${nama} || '%')
+        AND (${nik}::text IS NULL OR p.nik ILIKE '%' || ${nik} || '%')
+        AND (${dari}::date IS NULL OR p.tanggal_terima >= ${dari}::date)
+        AND (${sampai}::date IS NULL OR p.tanggal_terima <= ${sampai}::date)
       ORDER BY p.tanggal_terima DESC, p.id DESC
       LIMIT ${limit}
     `;
