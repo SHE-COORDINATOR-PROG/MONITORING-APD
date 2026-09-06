@@ -32,8 +32,11 @@ export async function GET(req: NextRequest) {
     const nik = searchParams.get("nik");
     const dari = searchParams.get("dari"); // YYYY-MM-DD
     const sampai = searchParams.get("sampai"); // YYYY-MM-DD
-    const limit = Math.min(Number(searchParams.get("limit") ?? 50), 200);
+    const limit = Math.min(Number(searchParams.get("limit") ?? 50), 1000);
 
+    // Filter yang sama dipakai dua kali (data + total) supaya jumlah yang
+    // ditampilkan di UI selalu konsisten dengan jumlah baris yang benar-benar
+    // cocok, bukan cuma banyaknya baris yang kebetulan ke-load.
     const rows = await sql`
       SELECT p.*, j.nama AS jenis_apd_nama
       FROM penerimaan_apd p
@@ -48,7 +51,20 @@ export async function GET(req: NextRequest) {
       ORDER BY p.tanggal_terima DESC, p.id DESC
       LIMIT ${limit}
     `;
-    return NextResponse.json({ data: rows });
+
+    const [{ total }] = await sql`
+      SELECT COUNT(*)::int AS total
+      FROM penerimaan_apd p
+      WHERE
+        (${departemen}::text IS NULL OR p.departemen = ${departemen})
+        AND (${jenis}::int IS NULL OR p.jenis_apd_id = ${jenis}::int)
+        AND (${nama}::text IS NULL OR p.nama_pekerja ILIKE '%' || ${nama} || '%')
+        AND (${nik}::text IS NULL OR p.nik ILIKE '%' || ${nik} || '%')
+        AND (${dari}::date IS NULL OR p.tanggal_terima >= ${dari}::date)
+        AND (${sampai}::date IS NULL OR p.tanggal_terima <= ${sampai}::date)
+    `;
+
+    return NextResponse.json({ data: rows, total });
   } catch (err) {
     console.error(err);
     return NextResponse.json(

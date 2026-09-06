@@ -16,6 +16,8 @@ const STATUS_WARNA: Record<string, string> = {
 
 export default function RiwayatClient() {
   const [data, setData] = useState<Penerimaan[]>([]);
+  const [total, setTotal] = useState(0);
+  const [tampilkanSemua, setTampilkanSemua] = useState(false);
   const [jenisList, setJenisList] = useState<JenisApd[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,13 +44,14 @@ export default function RiwayatClient() {
       if (jenisApdId) params.set("jenis_apd_id", jenisApdId);
       if (dari) params.set("dari", dari);
       if (sampai) params.set("sampai", sampai);
-      params.set("limit", "100");
+      params.set("limit", tampilkanSemua ? "1000" : "100");
 
       fetch(`/api/penerimaan?${params.toString()}`, { cache: "no-store" })
         .then(async (res) => {
           const json = await res.json();
           if (!res.ok) throw new Error(json.error ?? "Gagal memuat data");
           setData(json.data ?? []);
+          setTotal(json.total ?? (json.data ?? []).length);
           setError(null);
         })
         .catch((e) => setError(e.message))
@@ -56,7 +59,7 @@ export default function RiwayatClient() {
     }, 350);
 
     return () => clearTimeout(timeout);
-  }, [nama, nik, jenisApdId, dari, sampai]);
+  }, [nama, nik, jenisApdId, dari, sampai, tampilkanSemua]);
 
   const resetFilter = () => {
     setNama("");
@@ -64,6 +67,7 @@ export default function RiwayatClient() {
     setJenisApdId("");
     setDari("");
     setSampai("");
+    setTampilkanSemua(false);
   };
 
   const filterAktif = nama || nik || jenisApdId || dari || sampai;
@@ -192,9 +196,19 @@ export default function RiwayatClient() {
         )}
       </div>
       {!loading && data.length > 0 && (
-        <p className="mt-2 text-xs text-base-500">
-          Menampilkan {data.length} data terbaru (maks. 100 baris per filter).
-        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-base-500">
+          <p>
+            Menampilkan {data.length} dari total {total} data yang cocok dengan filter.
+          </p>
+          {total > data.length && (
+            <button
+              onClick={() => setTampilkanSemua(true)}
+              className="rounded-md border border-base-600 px-2 py-1 text-base-300 hover:bg-base-800"
+            >
+              Tampilkan semua ({total})
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

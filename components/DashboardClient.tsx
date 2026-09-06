@@ -42,10 +42,14 @@ const CHART_TICK = { fill: "#8b98a3", fontSize: 12 };
 const selectClass =
   "rounded-md border border-base-600 bg-base-800 px-3 py-2 text-sm text-base-100 focus:border-signal-amber focus:outline-none focus:ring-1 focus:ring-signal-amber";
 
+const AUTO_REFRESH_MS = 20000;
+
 export default function DashboardClient() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [jenisList, setJenisList] = useState<JenisApd[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const [dari, setDari] = useState("");
   const [sampai, setSampai] = useState("");
@@ -63,15 +67,47 @@ export default function DashboardClient() {
     if (dari) params.set("dari", dari);
     if (sampai) params.set("sampai", sampai);
     if (jenisApdId) params.set("jenis_apd_id", jenisApdId);
+    const query = params.toString();
 
-    fetch(`/api/stats?${params.toString()}`, { cache: "no-store" })
-      .then(async (res) => {
+    let cancelled = false;
+
+    const muatStats = async () => {
+      setRefreshing(true);
+      try {
+        const res = await fetch(`/api/stats?${query}`, { cache: "no-store" });
         const json = await res.json();
         if (!res.ok) throw new Error(json.error ?? "Gagal memuat data");
+        if (cancelled) return;
         setStats(json);
         setError(null);
-      })
-      .catch((e) => setError(e.message));
+        setLastUpdated(new Date());
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Gagal memuat data");
+      } finally {
+        if (!cancelled) setRefreshing(false);
+      }
+    };
+
+    // Muat segera saat filter berubah / pertama kali dibuka.
+    muatStats();
+
+    // Dashboard sebelumnya cuma fetch sekali dan tidak pernah update lagi
+    // selama halaman dibiarkan terbuka. Sekarang di-refresh otomatis secara
+    // berkala, dan segera setelah tab kembali aktif (mis. user habis isi
+    // formulir di tab lain lalu balik ke tab dashboard).
+    const interval = setInterval(muatStats, AUTO_REFRESH_MS);
+    const onFocusOrVisible = () => {
+      if (document.visibilityState === "visible") muatStats();
+    };
+    window.addEventListener("focus", onFocusOrVisible);
+    document.addEventListener("visibilitychange", onFocusOrVisible);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocusOrVisible);
+      document.removeEventListener("visibilitychange", onFocusOrVisible);
+    };
   }, [dari, sampai, jenisApdId]);
 
   const resetFilter = () => {
@@ -93,10 +129,6 @@ export default function DashboardClient() {
   }
 
   const { ringkasan, perJenis, perDepartemen, trenBulanan, akanKadaluarsa } = stats;
-  // Kunci unik per kombinasi filter, dipakai sebagai `key` chart di bawah supaya
-  // Recharts remount total saat filter berubah (menghindari tooltip/state lama
-  // yang salah nunjuk kategori setelah data hasil filter berubah bentuk/panjang).
-  const filterKey = `${dari}|${sampai}|${jenisApdId}`;
   const delta = ringkasan.bulan_ini - ringkasan.bulan_lalu;
   const deltaLabel =
     delta === 0
@@ -112,6 +144,37 @@ export default function DashboardClient() {
           <p className="mt-1 text-sm text-base-400">
             Ringkasan distribusi dan kepatuhan alat pelindung diri
           </p>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-base-500">
+          {lastUpdated && (
+            <span>
+              Diperbarui {lastUpdated.toLocaleTimeString("id-ID")}
+              {refreshing ? " · memuat…" : " · auto-refresh tiap 20 detik"}
+            </span>
+          )}
+          <button
+            onClick={() => {
+              const params = new URLSearchParams();
+              if (dari) params.set("dari", dari);
+              if (sampai) params.set("sampai", sampai);
+              if (jenisApdId) params.set("jenis_apd_id", jenisApdId);
+              setRefreshing(true);
+              fetch(`/api/stats?${params.toString()}`, { cache: "no-store" })
+                .then(async (res) => {
+                  const json = await res.json();
+                  if (!res.ok) throw new Error(json.error ?? "Gagal memuat data");
+                  setStats(json);
+                  setError(null);
+                  setLastUpdated(new Date());
+                })
+                .catch((e) => setError(e instanceof Error ? e.message : "Gagal memuat data"))
+                .finally(() => setRefreshing(false));
+            }}
+            disabled={refreshing}
+            className="rounded-md border border-base-600 px-2 py-1 text-base-300 hover:bg-base-800 disabled:opacity-50"
+          >
+            {refreshing ? "Memuat…" : "Refresh sekarang"}
+          </button>
         </div>
       </div>
 
@@ -159,9 +222,14 @@ export default function DashboardClient() {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <KpiCard label="Didistribusikan bulan ini" value={ringkasan.bulan_ini} sub={deltaLabel} />
         <KpiCard label="Total unit (sesuai filter)" value={ringkasan.total_sepanjang_waktu} />
+        <KpiCard
+          label="Jumlah transaksi (sesuai filter)"
+          value={ringkasan.total_transaksi}
+          sub="Cocokkan dengan total di Riwayat"
+        />
         <KpiCard label="Pekerja tercatat" value={ringkasan.total_pekerja_tercatat} />
         <KpiCard
           label="Akan kadaluarsa ≤ 30 hari"
@@ -173,7 +241,7 @@ export default function DashboardClient() {
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-5">
         <div className="rounded-lg border border-base-700 bg-base-900 p-4 lg:col-span-3">
           <div className="mb-3 text-sm font-medium text-base-200">Tren distribusi (6 bulan)</div>
-          <ResponsiveContainer key={`tren-${filterKey}`} width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={220}>
             <LineChart data={trenBulanan}>
               <CartesianGrid stroke="#28323d" vertical={false} />
               <XAxis dataKey="bulan" tick={CHART_TICK} axisLine={{ stroke: "#28323d" }} tickLine={false} />
@@ -189,9 +257,9 @@ export default function DashboardClient() {
 
         <div className="rounded-lg border border-base-700 bg-base-900 p-4 lg:col-span-2">
           <div className="mb-3 text-sm font-medium text-base-200">Distribusi per jenis APD</div>
-          <ResponsiveContainer key={`jenis-${filterKey}`} width="100%" height={220}>
-            <BarChart data={perJenis} layout="vertical" margin={{ left: 8 }} barCategoryGap="30%">
-              <XAxis type="number" tick={CHART_TICK} axisLine={false} tickLine={false} allowDecimals={false} />
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={perJenis} layout="vertical" margin={{ left: 8 }}>
+              <XAxis type="number" tick={CHART_TICK} axisLine={false} tickLine={false} />
               <YAxis
                 type="category"
                 dataKey="jenis"
@@ -204,7 +272,7 @@ export default function DashboardClient() {
                 contentStyle={{ background: "#1c242d", border: "1px solid #28323d", fontSize: 12 }}
                 labelStyle={{ color: "#e9edf0" }}
               />
-              <Bar dataKey="total" fill="#3f7ab0" radius={[0, 3, 3, 0]} barSize={28} />
+              <Bar dataKey="total" fill="#3f7ab0" radius={[0, 3, 3, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -213,7 +281,7 @@ export default function DashboardClient() {
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-5">
         <div className="rounded-lg border border-base-700 bg-base-900 p-4 lg:col-span-2">
           <div className="mb-3 text-sm font-medium text-base-200">Distribusi per departemen</div>
-          <ResponsiveContainer key={`dept-${filterKey}`} width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={220}>
             <BarChart data={perDepartemen}>
               <CartesianGrid stroke="#28323d" vertical={false} />
               <XAxis dataKey="departemen" tick={{ fill: "#8b98a3", fontSize: 11 }} axisLine={false} tickLine={false} />
