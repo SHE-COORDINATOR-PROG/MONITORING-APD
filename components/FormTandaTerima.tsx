@@ -77,7 +77,7 @@ export default function FormTandaTerima() {
 
   const onSubmit = async (values: FormValues) => {
     setSubmitting(true);
-    setServerError(null);
+        setServerError(null);
     try {
       const res = await fetch("/api/penerimaan", {
         method: "POST",
@@ -90,6 +90,7 @@ export default function FormTandaTerima() {
       }
       setResult(json.data);
       reset({ tanggal_terima: todayIso(), jumlah: 1, kondisi: "Baru" });
+      router.refresh();
     } catch (e) {
       setServerError(e instanceof Error ? e.message : "Terjadi kesalahan");
     } finally {
