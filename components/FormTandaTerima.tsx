@@ -51,13 +51,11 @@ const inputClass =
   "w-full rounded-md border border-base-600 bg-base-800 px-3 py-2 text-sm text-base-100 placeholder:text-base-500 focus:border-signal-amber focus:outline-none focus:ring-1 focus:ring-signal-amber";
 
 export default function FormTandaTerima() {
+  const router = useRouter();
   const [jenisList, setJenisList] = useState<JenisApd[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ id: number; tanggal_kadaluarsa: string } | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
-  export default function FormTandaTerima() {
-  const router = useRouter();
-  const [jenisList, setJenisList] = useState<JenisApd[]>([]);
 
   const {
     register,
@@ -77,7 +75,7 @@ export default function FormTandaTerima() {
 
   const onSubmit = async (values: FormValues) => {
     setSubmitting(true);
-        setServerError(null);
+    setServerError(null);
     try {
       const res = await fetch("/api/penerimaan", {
         method: "POST",
