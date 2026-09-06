@@ -5,22 +5,26 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Skala dibalik dari tema gelap sebelumnya: 950/900 sekarang jadi
+        // permukaan paling terang (putih), 100 jadi teks paling gelap.
+        // Nama token TIDAK diubah supaya semua className lama tetap valid,
+        // cuma nilai warnanya yang diganti jadi tema terang.
         base: {
-          950: "#0d1117",
-          900: "#141a21",
-          800: "#1c242d",
-          700: "#28323d",
-          600: "#3a4753",
-          500: "#5b6b78",
-          400: "#8b98a3",
-          300: "#b8c2ca",
-          100: "#e9edf0",
+          950: "#ffffff",
+          900: "#f7f8f9",
+          800: "#eef1f3",
+          700: "#dde2e7",
+          600: "#c3cad2",
+          500: "#8a95a1",
+          400: "#5f6b78",
+          300: "#33404c",
+          100: "#10161d",
         },
         signal: {
-          amber: "#e8a13a",
-          red: "#d0523f",
-          green: "#4c9a6a",
-          blue: "#3f7ab0",
+          amber: "#eab308",
+          red: "#dc2626",
+          green: "#16a34a",
+          blue: "#2563eb",
         },
       },
       fontFamily: {

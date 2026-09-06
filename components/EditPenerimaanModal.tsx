@@ -160,7 +160,7 @@ export default function EditPenerimaanModal({
           <button
             onClick={submit}
             disabled={submitting}
-            className="rounded-md bg-signal-amber px-4 py-2 text-sm font-medium text-base-950 disabled:opacity-60"
+            className="rounded-md bg-signal-amber px-4 py-2 text-sm font-medium text-base-100 disabled:opacity-60"
           >
             {submitting ? "Menyimpan…" : "Simpan perubahan"}
           </button>

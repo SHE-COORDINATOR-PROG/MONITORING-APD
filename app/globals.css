@@ -3,17 +3,17 @@
 @tailwind utilities;
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
-  background-color: #0d1117;
-  color: #e9edf0;
+  background-color: #ffffff;
+  color: #10161d;
 }
 
 ::selection {
-  background-color: #e8a13a;
-  color: #0d1117;
+  background-color: #16a34a;
+  color: #ffffff;
 }
 
 .scrollbar-thin::-webkit-scrollbar {
@@ -21,8 +21,23 @@ body {
   width: 6px;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: #3a4753;
+  background-color: #c3cad2;
   border-radius: 4px;
+}
+
+/* Stripe aksen tiga warna (hijau-merah-kuning) dipakai sebagai list dekoratif
+   di sidebar dan atas kartu, konsisten dengan identitas KPP Mining & CISS. */
+.stripe-triwarna {
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    #16a34a 0%,
+    #16a34a 33.33%,
+    #dc2626 33.33%,
+    #dc2626 66.66%,
+    #eab308 66.66%,
+    #eab308 100%
+  );
 }
 
 @media (prefers-reduced-motion: reduce) {

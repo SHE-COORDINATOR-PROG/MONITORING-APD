@@ -8,8 +8,9 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
+  ComposedChart,
   Line,
+  Area,
   CartesianGrid,
 } from "recharts";
 import KpiCard from "@/components/KpiCard";
@@ -38,11 +39,53 @@ type Stats = {
   }[];
 };
 
-const CHART_TICK = { fill: "#8b98a3", fontSize: 12 };
+const CHART_TICK = { fill: "#5f6b78", fontSize: 12 };
+const GRID_STROKE = "#dde2e7";
+const TOOLTIP_STYLE = { background: "#ffffff", border: "1px solid #dde2e7", fontSize: 12 };
+const TOOLTIP_LABEL_STYLE = { color: "#10161d" };
 const selectClass =
   "rounded-md border border-base-600 bg-base-800 px-3 py-2 text-sm text-base-100 focus:border-signal-amber focus:outline-none focus:ring-1 focus:ring-signal-amber";
 
 const AUTO_REFRESH_MS = 20000;
+
+// --- Tampilan bar 3D (isometrik) ------------------------------------------
+// recharts tidak punya chart 3D bawaan (dan menambah library 3D seperti
+// three.js di luar cakupan proyek ini), jadi efek 3D dibuat manual dengan
+// menggambar 3 sisi (depan, atas, samping) per batang lewat prop `shape`.
+function shadeColor(hex: string, percent: number) {
+  const num = parseInt(hex.replace("#", ""), 16);
+  let r = (num >> 16) & 0xff;
+  let g = (num >> 8) & 0xff;
+  let b = num & 0xff;
+  const amt = Math.round(255 * percent);
+  r = Math.max(0, Math.min(255, r + amt));
+  g = Math.max(0, Math.min(255, g + amt));
+  b = Math.max(0, Math.min(255, b + amt));
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+}
+
+function Bar3DShape(props: any) {
+  const { x, y, width, height, fill } = props;
+  if (!width || !height || width <= 0 || height <= 0) return null;
+  const d = 7; // kedalaman efek 3D
+  const top = shadeColor(fill, 0.28);
+  const side = shadeColor(fill, -0.22);
+  return (
+    <g>
+      <polygon
+        points={`${x + width},${y} ${x + width + d},${y - d} ${x + width + d},${
+          y + height - d
+        } ${x + width},${y + height}`}
+        fill={side}
+      />
+      <polygon
+        points={`${x},${y} ${x + d},${y - d} ${x + width + d},${y - d} ${x + width},${y}`}
+        fill={top}
+      />
+      <rect x={x} y={y} width={width} height={height} fill={fill} />
+    </g>
+  );
+}
 
 export default function DashboardClient() {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -234,12 +277,8 @@ export default function DashboardClient() {
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <KpiCard label="Didistribusikan bulan ini" value={ringkasan.bulan_ini} sub={deltaLabel} />
-        <KpiCard label="Total unit (sesuai filter)" value={ringkasan.total_sepanjang_waktu} />
-        <KpiCard
-          label="Jumlah transaksi (sesuai filter)"
-          value={ringkasan.total_transaksi}
-          sub="Cocokkan dengan total di Riwayat"
-        />
+        <KpiCard label="Total unit" value={ringkasan.total_sepanjang_waktu} />
+        <KpiCard label="Jumlah transaksi" value={ringkasan.total_transaksi} />
         <KpiCard label="Pekerja tercatat" value={ringkasan.total_pekerja_tercatat} />
         <KpiCard
           label="Akan kadaluarsa ≤ 30 hari"
@@ -252,37 +291,48 @@ export default function DashboardClient() {
         <div className="rounded-lg border border-base-700 bg-base-900 p-4 lg:col-span-3">
           <div className="mb-3 text-sm font-medium text-base-200">Tren distribusi (6 bulan)</div>
           <ResponsiveContainer key={chartKey} width="100%" height={220}>
-            <LineChart data={trenBulanan}>
-              <CartesianGrid stroke="#28323d" vertical={false} />
-              <XAxis dataKey="bulan" tick={CHART_TICK} axisLine={{ stroke: "#28323d" }} tickLine={false} />
+            <ComposedChart data={trenBulanan} margin={{ top: 10, right: 12 }}>
+              <defs>
+                <linearGradient id="trenGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#eab308" stopOpacity={0.5} />
+                  <stop offset="95%" stopColor="#eab308" stopOpacity={0.04} />
+                </linearGradient>
+                <filter id="lineShadow3d" x="-30%" y="-30%" width="160%" height="160%">
+                  <feDropShadow dx="2" dy="3" stdDeviation="2.5" floodColor="#33404c" floodOpacity="0.35" />
+                </filter>
+              </defs>
+              <CartesianGrid stroke={GRID_STROKE} vertical={false} />
+              <XAxis dataKey="bulan" tick={CHART_TICK} axisLine={{ stroke: GRID_STROKE }} tickLine={false} />
               <YAxis tick={CHART_TICK} axisLine={false} tickLine={false} width={30} />
-              <Tooltip
-                contentStyle={{ background: "#1c242d", border: "1px solid #28323d", fontSize: 12 }}
-                labelStyle={{ color: "#e9edf0" }}
+              <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} />
+              <Area type="monotone" dataKey="total" stroke="none" fill="url(#trenGradient)" />
+              <Line
+                type="monotone"
+                dataKey="total"
+                stroke="#eab308"
+                strokeWidth={3}
+                dot={{ r: 4, fill: "#eab308", stroke: "#ffffff", strokeWidth: 2 }}
+                style={{ filter: "url(#lineShadow3d)" }}
               />
-              <Line type="monotone" dataKey="total" stroke="#e8a13a" strokeWidth={2} dot={{ r: 3 }} />
-            </LineChart>
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
 
         <div className="rounded-lg border border-base-700 bg-base-900 p-4 lg:col-span-2">
           <div className="mb-3 text-sm font-medium text-base-200">Distribusi per jenis APD</div>
           <ResponsiveContainer key={chartKey} width="100%" height={220}>
-            <BarChart data={perJenis} layout="vertical" margin={{ left: 8 }}>
+            <BarChart data={perJenis} layout="vertical" margin={{ left: 8, right: 16, top: 8 }}>
               <XAxis type="number" tick={CHART_TICK} axisLine={false} tickLine={false} />
               <YAxis
                 type="category"
                 dataKey="jenis"
-                tick={{ fill: "#8b98a3", fontSize: 11 }}
+                tick={{ fill: "#5f6b78", fontSize: 11 }}
                 width={110}
                 axisLine={false}
                 tickLine={false}
               />
-              <Tooltip
-                contentStyle={{ background: "#1c242d", border: "1px solid #28323d", fontSize: 12 }}
-                labelStyle={{ color: "#e9edf0" }}
-              />
-              <Bar dataKey="total" fill="#3f7ab0" radius={[0, 3, 3, 0]} />
+              <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} cursor={{ fill: "#eef1f3" }} />
+              <Bar dataKey="total" fill="#16a34a" shape={Bar3DShape} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -292,15 +342,12 @@ export default function DashboardClient() {
         <div className="rounded-lg border border-base-700 bg-base-900 p-4 lg:col-span-2">
           <div className="mb-3 text-sm font-medium text-base-200">Distribusi per departemen</div>
           <ResponsiveContainer key={chartKey} width="100%" height={220}>
-            <BarChart data={perDepartemen}>
-              <CartesianGrid stroke="#28323d" vertical={false} />
-              <XAxis dataKey="departemen" tick={{ fill: "#8b98a3", fontSize: 11 }} axisLine={false} tickLine={false} />
+            <BarChart data={perDepartemen} margin={{ top: 8, right: 16 }}>
+              <CartesianGrid stroke={GRID_STROKE} vertical={false} />
+              <XAxis dataKey="departemen" tick={{ fill: "#5f6b78", fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={CHART_TICK} axisLine={false} tickLine={false} width={30} />
-              <Tooltip
-                contentStyle={{ background: "#1c242d", border: "1px solid #28323d", fontSize: 12 }}
-                labelStyle={{ color: "#e9edf0" }}
-              />
-              <Bar dataKey="total" fill="#4c9a6a" radius={[3, 3, 0, 0]} />
+              <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} cursor={{ fill: "#eef1f3" }} />
+              <Bar dataKey="total" fill="#dc2626" shape={Bar3DShape} />
             </BarChart>
           </ResponsiveContainer>
         </div>

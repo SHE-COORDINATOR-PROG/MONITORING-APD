@@ -115,7 +115,7 @@ export default function FormTandaTerima() {
           </p>
           <button
             onClick={() => setResult(null)}
-            className="mt-6 rounded-md bg-signal-amber px-4 py-2 text-sm font-medium text-base-950"
+            className="mt-6 rounded-md bg-signal-amber px-4 py-2 text-sm font-medium text-base-100"
           >
             Isi tanda terima baru
           </button>
@@ -253,7 +253,7 @@ export default function FormTandaTerima() {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-md bg-signal-amber py-2.5 text-sm font-medium text-base-950 disabled:opacity-60"
+          className="w-full rounded-md bg-signal-amber py-2.5 text-sm font-medium text-base-100 disabled:opacity-60"
         >
           {submitting ? "Menyimpan…" : "Simpan Tanda Terima"}
         </button>
