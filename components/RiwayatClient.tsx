@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { JenisApd, Penerimaan } from "@/lib/types";
 import { formatTanggalID } from "@/lib/types";
+import EditPenerimaanModal from "@/components/EditPenerimaanModal";
 
 const inputClass =
   "w-full rounded-md border border-base-600 bg-base-800 px-3 py-2 text-sm text-base-100 placeholder:text-base-500 focus:border-signal-amber focus:outline-none focus:ring-1 focus:ring-signal-amber";
@@ -27,6 +28,7 @@ export default function RiwayatClient() {
   const [jenisApdId, setJenisApdId] = useState("");
   const [dari, setDari] = useState("");
   const [sampai, setSampai] = useState("");
+  const [editingRow, setEditingRow] = useState<Penerimaan | null>(null);
 
   useEffect(() => {
     fetch("/api/jenis-apd")
@@ -167,6 +169,7 @@ export default function RiwayatClient() {
                   <th className="px-4 py-3 font-normal">Tgl Terima</th>
                   <th className="px-4 py-3 font-normal">Tgl Kadaluarsa</th>
                   <th className="px-4 py-3 font-normal">Status</th>
+                  <th className="px-4 py-3 font-normal">Aksi</th>
                 </tr>
               </thead>
               <tbody>
@@ -187,6 +190,14 @@ export default function RiwayatClient() {
                     </td>
                     <td className={`px-4 py-2.5 font-medium ${STATUS_WARNA[row.status] ?? "text-base-300"}`}>
                       {row.status}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <button
+                        onClick={() => setEditingRow(row)}
+                        className="rounded-md border border-base-600 px-2 py-1 text-xs text-base-300 hover:bg-base-800"
+                      >
+                        Edit
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -209,6 +220,17 @@ export default function RiwayatClient() {
             </button>
           )}
         </div>
+      )}
+      {editingRow && (
+        <EditPenerimaanModal
+          row={editingRow}
+          jenisList={jenisList}
+          onClose={() => setEditingRow(null)}
+          onSaved={(updated) => {
+            setData((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+            setEditingRow(null);
+          }}
+        />
       )}
     </div>
   );
