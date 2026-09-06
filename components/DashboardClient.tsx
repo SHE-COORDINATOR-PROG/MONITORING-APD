@@ -93,6 +93,10 @@ export default function DashboardClient() {
   }
 
   const { ringkasan, perJenis, perDepartemen, trenBulanan, akanKadaluarsa } = stats;
+  // Kunci unik per kombinasi filter, dipakai sebagai `key` chart di bawah supaya
+  // Recharts remount total saat filter berubah (menghindari tooltip/state lama
+  // yang salah nunjuk kategori setelah data hasil filter berubah bentuk/panjang).
+  const filterKey = `${dari}|${sampai}|${jenisApdId}`;
   const delta = ringkasan.bulan_ini - ringkasan.bulan_lalu;
   const deltaLabel =
     delta === 0
@@ -169,7 +173,7 @@ export default function DashboardClient() {
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-5">
         <div className="rounded-lg border border-base-700 bg-base-900 p-4 lg:col-span-3">
           <div className="mb-3 text-sm font-medium text-base-200">Tren distribusi (6 bulan)</div>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer key={`tren-${filterKey}`} width="100%" height={220}>
             <LineChart data={trenBulanan}>
               <CartesianGrid stroke="#28323d" vertical={false} />
               <XAxis dataKey="bulan" tick={CHART_TICK} axisLine={{ stroke: "#28323d" }} tickLine={false} />
@@ -185,9 +189,9 @@ export default function DashboardClient() {
 
         <div className="rounded-lg border border-base-700 bg-base-900 p-4 lg:col-span-2">
           <div className="mb-3 text-sm font-medium text-base-200">Distribusi per jenis APD</div>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={perJenis} layout="vertical" margin={{ left: 8 }}>
-              <XAxis type="number" tick={CHART_TICK} axisLine={false} tickLine={false} />
+          <ResponsiveContainer key={`jenis-${filterKey}`} width="100%" height={220}>
+            <BarChart data={perJenis} layout="vertical" margin={{ left: 8 }} barCategoryGap="30%">
+              <XAxis type="number" tick={CHART_TICK} axisLine={false} tickLine={false} allowDecimals={false} />
               <YAxis
                 type="category"
                 dataKey="jenis"
@@ -200,7 +204,7 @@ export default function DashboardClient() {
                 contentStyle={{ background: "#1c242d", border: "1px solid #28323d", fontSize: 12 }}
                 labelStyle={{ color: "#e9edf0" }}
               />
-              <Bar dataKey="total" fill="#3f7ab0" radius={[0, 3, 3, 0]} />
+              <Bar dataKey="total" fill="#3f7ab0" radius={[0, 3, 3, 0]} barSize={28} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -209,7 +213,7 @@ export default function DashboardClient() {
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-5">
         <div className="rounded-lg border border-base-700 bg-base-900 p-4 lg:col-span-2">
           <div className="mb-3 text-sm font-medium text-base-200">Distribusi per departemen</div>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer key={`dept-${filterKey}`} width="100%" height={220}>
             <BarChart data={perDepartemen}>
               <CartesianGrid stroke="#28323d" vertical={false} />
               <XAxis dataKey="departemen" tick={{ fill: "#8b98a3", fontSize: 11 }} axisLine={false} tickLine={false} />
