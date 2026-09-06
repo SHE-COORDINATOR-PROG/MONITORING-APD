@@ -4,6 +4,12 @@ import { sql } from "@/lib/db";
 import { tambahBulan } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
+const NO_CACHE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+} as const;
 
 const payloadSchema = z.object({
   nama_pekerja: z.string().min(2, "Nama pekerja wajib diisi"),
@@ -64,12 +70,12 @@ export async function GET(req: NextRequest) {
         AND (${sampai}::date IS NULL OR p.tanggal_terima <= ${sampai}::date)
     `;
 
-    return NextResponse.json({ data: rows, total });
+    return NextResponse.json({ data: rows, total }, { headers: NO_CACHE_HEADERS });
   } catch (err) {
     console.error(err);
     return NextResponse.json(
       { error: "Gagal mengambil data penerimaan APD." },
-      { status: 500 }
+      { status: 500, headers: NO_CACHE_HEADERS }
     );
   }
 }

@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
+const NO_CACHE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+} as const;
 
 export async function GET(req: NextRequest) {
   try {
@@ -82,18 +88,21 @@ export async function GET(req: NextRequest) {
       LIMIT 25
     `;
 
-    return NextResponse.json({
-      ringkasan,
-      perJenis,
-      perDepartemen,
-      trenBulanan,
-      akanKadaluarsa,
-    });
+    return NextResponse.json(
+      {
+        ringkasan,
+        perJenis,
+        perDepartemen,
+        trenBulanan,
+        akanKadaluarsa,
+      },
+      { headers: NO_CACHE_HEADERS }
+    );
   } catch (err) {
     console.error(err);
     return NextResponse.json(
       { error: "Gagal mengambil statistik. Pastikan database sudah di-setup (lihat README)." },
-      { status: 500 }
+      { status: 500, headers: NO_CACHE_HEADERS }
     );
   }
 }

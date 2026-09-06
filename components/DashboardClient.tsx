@@ -74,7 +74,9 @@ export default function DashboardClient() {
     const muatStats = async () => {
       setRefreshing(true);
       try {
-        const res = await fetch(`/api/stats?${query}`, { cache: "no-store" });
+        const res = await fetch(`/api/stats?${query}${query ? "&" : ""}_t=${Date.now()}`, {
+          cache: "no-store",
+        });
         const json = await res.json();
         if (!res.ok) throw new Error(json.error ?? "Gagal memuat data");
         if (cancelled) return;
@@ -135,6 +137,12 @@ export default function DashboardClient() {
       ? "Sama seperti bulan lalu"
       : `${delta > 0 ? "+" : ""}${delta} unit vs bulan lalu`;
   const filterAktif = dari || sampai || jenisApdId;
+  // recharts kadang menyimpan state hover/tooltip lama saat prop `data`
+  // berubah drastis (mis. dari banyak kategori jadi satu kategori setelah
+  // difilter), sehingga label/tooltip dari data sebelumnya masih nyangkut.
+  // Memberi `key` yang berubah tiap kombinasi filter memaksa React
+  // me-remount chart dari nol, bukan cuma update data-nya.
+  const chartKey = `${dari}|${sampai}|${jenisApdId}`;
 
   return (
     <div className="p-4 md:p-8">
@@ -159,7 +167,9 @@ export default function DashboardClient() {
               if (sampai) params.set("sampai", sampai);
               if (jenisApdId) params.set("jenis_apd_id", jenisApdId);
               setRefreshing(true);
-              fetch(`/api/stats?${params.toString()}`, { cache: "no-store" })
+              fetch(`/api/stats?${params.toString()}${params.toString() ? "&" : ""}_t=${Date.now()}`, {
+                cache: "no-store",
+              })
                 .then(async (res) => {
                   const json = await res.json();
                   if (!res.ok) throw new Error(json.error ?? "Gagal memuat data");
@@ -241,7 +251,7 @@ export default function DashboardClient() {
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-5">
         <div className="rounded-lg border border-base-700 bg-base-900 p-4 lg:col-span-3">
           <div className="mb-3 text-sm font-medium text-base-200">Tren distribusi (6 bulan)</div>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer key={chartKey} width="100%" height={220}>
             <LineChart data={trenBulanan}>
               <CartesianGrid stroke="#28323d" vertical={false} />
               <XAxis dataKey="bulan" tick={CHART_TICK} axisLine={{ stroke: "#28323d" }} tickLine={false} />
@@ -257,7 +267,7 @@ export default function DashboardClient() {
 
         <div className="rounded-lg border border-base-700 bg-base-900 p-4 lg:col-span-2">
           <div className="mb-3 text-sm font-medium text-base-200">Distribusi per jenis APD</div>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer key={chartKey} width="100%" height={220}>
             <BarChart data={perJenis} layout="vertical" margin={{ left: 8 }}>
               <XAxis type="number" tick={CHART_TICK} axisLine={false} tickLine={false} />
               <YAxis
@@ -281,7 +291,7 @@ export default function DashboardClient() {
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-5">
         <div className="rounded-lg border border-base-700 bg-base-900 p-4 lg:col-span-2">
           <div className="mb-3 text-sm font-medium text-base-200">Distribusi per departemen</div>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer key={chartKey} width="100%" height={220}>
             <BarChart data={perDepartemen}>
               <CartesianGrid stroke="#28323d" vertical={false} />
               <XAxis dataKey="departemen" tick={{ fill: "#8b98a3", fontSize: 11 }} axisLine={false} tickLine={false} />
