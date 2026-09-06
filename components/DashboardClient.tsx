@@ -332,7 +332,7 @@ export default function DashboardClient() {
                 tickLine={false}
               />
               <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} cursor={{ fill: "#eef1f3" }} />
-              <Bar dataKey="total" fill="#16a34a" shape={Bar3DShape} />
+              <Bar dataKey="total" fill="#16a34a" shape={Bar3DShape as any} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -347,7 +347,7 @@ export default function DashboardClient() {
               <XAxis dataKey="departemen" tick={{ fill: "#5f6b78", fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={CHART_TICK} axisLine={false} tickLine={false} width={30} />
               <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} cursor={{ fill: "#eef1f3" }} />
-              <Bar dataKey="total" fill="#dc2626" shape={Bar3DShape} />
+              <Bar dataKey="total" fill="#dc2626" shape={Bar3DShape as any} />
             </BarChart>
           </ResponsiveContainer>
         </div>
